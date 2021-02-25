@@ -17,6 +17,34 @@ match expr with
   |Plus (e0,e1) -> "(" ^ string_of_exp e0 ^ " + " ^ string_of_exp e1 ^ ")"
   |Mult (e0,e1) -> "(" ^ string_of_exp e0 ^ " * " ^ string_of_exp e1 ^ ")";;
 
+exception Eval_Error;;
+
+let rec eval expr =
+  match expr with
+    | True -> True
+    | False -> False
+    | If (e0,e1,e2) -> match eval e0 with
+      | True -> eval e1
+      | False -> eval e2
+      | _ -> raise Eval_Error
+    | Num (n) -> Num (n)
+    | IsZero (e) -> match eval e with
+      | Num (n) -> match n with
+        | 0 -> True
+        | n -> False
+      | _ -> raise Eval_Error
+    |Plus (e0,e1) -> match eval e0 with
+      | Num (n1) -> match eval e1 with
+        | Num (n2) -> Num (n1+n2)
+        | _ -> raise Eval_Error
+      | _ -> raise Eval_Error
+    |Mult (e0,e1) -> match eval e0 with
+      | Num (n1) -> match eval e1 with
+        | Num (n2) -> Num (n1*n2)
+        | _ -> raise Eval_Error
+      | _ -> raise Eval_Error
+
+
 string_of_exp(
   Num(3)
 );;
