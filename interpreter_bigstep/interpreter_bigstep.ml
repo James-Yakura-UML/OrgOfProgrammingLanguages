@@ -236,3 +236,112 @@ string_of_exp(
         Num(2)))))
 );;
 (*  16) if true then if (isZero (3 * 5)) then (3 + 2) else (5 + 1) else if true then (3 * 2) else (2 * (3 + 2)) *)
+
+
+eval True
+(*Output: True*)
+
+eval False
+(*Output: False*)
+
+eval (Num 0)
+(*Output: (Num 0)*)
+
+eval (IsZero (Num 0))
+(*Output: True*)
+
+eval (IsZero (Plus (Num 1, Num 1)))
+(*Output: False*)
+
+eval (IsZero (Plus (Plus (Num 2, Num (-1)), Num 1)))
+(*Output: False*)
+
+eval (Plus (Plus (Num (-1), Num 1), Plus (Num (-1), Num 1)))
+(*Output: (Num 0)*)
+
+eval (Plus (Num (-1), Plus (Mult (Num 2, Num 2), Num 1)))
+(*Output: (Num 4)*)
+
+eval (Plus (Plus (Plus (Num 2, Num (-1)), Num 1), Num (-1)))
+(*Output: (Num 1)*)
+
+eval (Plus (IsZero (Plus (Num (-1), Num 1)), Num 1))
+(*Output:  Eval_error*)
+
+eval (IsZero (If (IsZero (Num 0), True, Num 0)))
+(*Output:  Eval_error*)
+
+eval
+   (IsZero
+      (If
+         ( IsZero (Mult (Num 5, Num 0))
+         , If (False, Num 0, IsZero (Plus (Num (-1), Num 0)))
+         , Num 0 )))
+(*Output:  Eval_error*)
+
+eval (If (IsZero (Plus (Num (-1), Num 1)), Num 2, True))
+(*Output:  (Num 2)*)
+
+eval
+   (If
+      ( If (IsZero (Mult (Plus (Num 1, Num (-1)), Num 1)), False, True)
+      , Mult (Num 1, Num 2)
+      , True ))
+(*Output:  True*)
+
+eval
+   (If
+      ( If (IsZero (Mult (Num 0, Num 0)), IsZero (Num 2), Num 0)
+      , Mult (Num 2, Mult (Num 1, Num 1))
+      , Plus
+          ( Plus
+              ( Plus
+                  ( Plus (If (IsZero (Num 0), Num 1, Num 0), Num (-1))
+                  , Num 1 )
+              , Num (-1) )
+          , Num 1 ) )))
+(*Output:  (Num 1)*)
+
+eval
+   (If
+      ( True
+      , If (True, Mult (If (False, Num 0, Num 1), Num 1), Num 5)
+      , Plus (Mult (Num 4, Num 1), Num 1) ))
+(*Output:  (Num 1)*)
+
+eval
+   (If
+      ( IsZero (If (IsZero (Plus (Num (-1), Num 2)), Num 0, Num 1))
+      , If
+          ( True
+          , If (False, Mult (Num 0, Num 6), Plus (Num 0, Num 1))
+          , Num 5 )
+      , Num 5 ))
+(*Output:  (Num 5)*)
+
+eval
+   (If
+      ( IsZero (Plus (Num (-1), Plus (Num 1, Plus (Num (-1), Num 1))))
+      , IsZero True
+      , Num 1 ))
+(*Output:  Eval_error*)
+
+eval
+   (Plus
+      ( Num 1
+      , Plus
+          ( Num (-1)
+          , If
+              ( IsZero (Plus (Num 1, If (True, Num 1, Num 2)))
+              , Plus (Num 1, Num 2)
+              , Mult (Num 2, Num 2) ) ) ))
+(*Output:  (Num 4)*)
+
+eval
+   (Plus
+      ( Num (-1)
+      , If
+          ( IsZero (Plus (Num 5, Num (-4)))
+          , Mult (Num 123, Plus (Num 5, Num (-4)))
+          , IsZero (Num 0) ) ))
+(*Output:  Eval_error*)
