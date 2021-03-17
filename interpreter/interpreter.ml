@@ -43,7 +43,7 @@ match e with
       | _ -> (n0*n1)
     | _ -> raise Eval_error
   | Apply (e0, e1) -> match e0 with
-    | Lambda (var, typ, e0) -> multi_step (substitution (e0, var, e1))
+    | Lambda (var, typ, e0) -> multi_step (substitution e0 var e1)
     | _ -> raise Eval_error
   | _ -> raise Eval_error
 
@@ -80,7 +80,7 @@ match e with
       | _ -> raise Type_error
     | _ -> raise Type_error
   | Var (name) -> raise Type_error
-  | Lambda (var, t, e0) -> TArrow (t, type_check(substitution(e0, var, dummy_value(t))))
+  | Lambda (var, t, e0) -> TArrow (t, type_check (substitution e0 var (dummy_value t)))
   | Apply (e0, e1) -> match type_check e0 with 
     | TArrow (left, right) -> match left with
       | (type_check e1) -> right
@@ -91,7 +91,7 @@ match e with
 let rec dummy_value (t: typ)=match t with (*This is a separate method in order to handle functions that output functions.*)
   | TBool -> True
   | TInt -> Num (0)
-  | TArrow (left, right) -> Lambda("X", left, dummy_value (right))
+  | TArrow (left, right) -> Lambda("X", left, dummy_value right)
   | _ -> raise Type_error
 
 let rec free_variables (e: exp) = match e with
@@ -101,7 +101,7 @@ let rec free_variables (e: exp) = match e with
   | Plus (e0, e1) -> (free_variables e0) ^ (free_variables e1)
   | Mult (e0, e1) -> (free_variables e0) ^ (free_variables e1)
   | Lambda (var, t, e0) -> free_variables (substitution (e0, var, dummy_value (t)))
-  | Apply (e0, e1) -> free_variables (substitution (e0, var, e1))
+  | Apply (e0, e1) -> free_variables (substitution e0 var e1)
   | _ -> ""
 
 let rec substitution (e1: exp) (x: string) (e2: exp) = match e1 with
