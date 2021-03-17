@@ -95,14 +95,14 @@ let rec dummy_value (t: typ)=match t with (*This is a separate method in order t
   | _ -> raise Type_error
 
 let rec free_variables (e: exp) = match e with
-  | Var (name) -> name ^ ", "
-  | If (e0,e1,e2) -> (free_variables e0) ^ (free_variables e1) ^ (free_variables e2)
+  | Var (name) -> [name]
+  | If (e0,e1,e2) -> (free_variables e0)::(free_variables e1)::(free_variables e2)
   | IsZero (e0) -> (free_variables e0)
-  | Plus (e0, e1) -> (free_variables e0) ^ (free_variables e1)
-  | Mult (e0, e1) -> (free_variables e0) ^ (free_variables e1)
+  | Plus (e0, e1) -> (free_variables e0)::(free_variables e1)
+  | Mult (e0, e1) -> (free_variables e0)::(free_variables e1)
   | Lambda (var, t, e0) -> free_variables (substitution (e0, var, dummy_value (t)))
   | Apply (e0, e1) -> free_variables (substitution e0 var e1)
-  | _ -> ""
+  | _ -> []
 
 let rec substitution (e1: exp) (x: string) (e2: exp) = match e1 with
   | Var (name) -> match name with
