@@ -15,6 +15,8 @@ type exp =
 | Lambda of string * typ * exp 
 | Apply of exp * exp   
 
+type type_environment = (string * typ) list
+
 exception Eval_error  
 exception Type_error  
 exception Substitution_error  
@@ -64,44 +66,44 @@ match e with
 | Lambda (var, typ, e0) -> Lambda (var, typ, e0) 
 | _ -> step e  
 
-and type_check (e: exp) = 
+and type_check (te: type_environment) (e: exp) = 
 match e with
 | True -> TBool 
 | False -> TBool 
 | If (cond,_then,_else) -> 
-  ( match type_check cond with 
+  ( match type_check te cond with 
   | TBool -> 
-    ( match type_check _then with 
+    ( match type_check te _then with 
     | t -> 
-      (match type_check _else with 
+      (match type_check te _else with 
       | x when (x=t) -> t
       | _ -> raise Type_error)) 
   | _ -> raise Type_error ) 
 | Num (n) -> TInt
 | IsZero (e) -> 
-  (match type_check e with
+  (match type_check te e with
   | TInt -> TBool
   | _ -> raise Type_error)
 | Plus (left,right) -> 
-  (match type_check left with
+  (match type_check te left with
   | TInt -> 
-    (match type_check right with
+    (match type_check te right with
     | TInt -> TInt
     | _ -> raise Type_error)
   | _ -> raise Type_error)
 | Mult (left,right) -> 
-  (match type_check left with
+  (match type_check te left with
   | TInt -> 
-    (match type_check right with
+    (match type_check te right with
     | TInt -> TInt
     | _ -> raise Type_error)
   | _ -> raise Type_error)
 | Var (handle) -> raise Type_error
-| Lambda (var_name, var_type, expr) -> TArrow (var_type, type_check (substitution expr var_name (dummy_value var_type)))
+| Lambda (var_name, var_type, expr) -> TArrow (var_type, type_check te (substitution expr var_name (dummy_value var_type)))
 | Apply (lambda, argument) -> 
-  (match type_check lambda with
+  (match type_check te lambda with
   | TArrow (lambda_left_type, lambda_right_type) -> 
-    (match type_check argument with
+    (match type_check te argument with
     | lambda_left_type -> lambda_right_type
     | _ -> raise Type_error)
   | t -> t)
