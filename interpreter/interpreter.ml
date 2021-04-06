@@ -47,7 +47,7 @@ match e with
   | Num (n0) ->  
     (match multi_step e1 with 
     | Num (n1) -> Num (n0*n1) 
-    | _ -> (n0*n1)) 
+    | _ -> raise Eval_error) 
   | _ -> raise Eval_error) 
 | Apply (e0, e1) ->  
   (match e0 with 
@@ -74,7 +74,7 @@ match e with
     ( match type_check _then with 
     | t -> 
       (match type_check _else with 
-      | t -> t
+      | x when (x=t) -> t
       | _ -> raise Type_error)) 
   | _ -> raise Type_error ) 
 | Num (n) -> TInt
@@ -99,9 +99,9 @@ match e with
 | Var (handle) -> raise Type_error
 | Lambda (var_name, var_type, expr) -> TArrow (var_type, type_check (substitution expr var_name (dummy_value var_type)))
 | Apply (lambda, argument) -> 
-  (match typeof lambda with
+  (match type_check lambda with
   | TArrow (lambda_left_type, lambda_right_type) -> 
-    (match typeof argument with
+    (match type_check argument with
     | lambda_left_type -> lambda_right_type
     | _ -> raise Type_error)
   | t -> t)
@@ -117,12 +117,15 @@ match t with
 and free_variables (e: exp) = 
 match e with 
 | Var (name) -> [name] 
-| If (e0,e1,e2) -> (free_variables e0)::(free_variables e1)::(free_variables e2) 
+| If (e0,e1,e2) -> (free_variables e0) @ (free_variables e1) @ (free_variables e2) 
 | IsZero (e0) -> (free_variables e0) 
-| Plus (e0, e1) -> (free_variables e0)::(free_variables e1) 
-| Mult (e0, e1) -> (free_variables e0)::(free_variables e1) 
-| Lambda (var, t, e0) -> free_variables (substitution (e0, var, dummy_value (t))) 
-| Apply (e0, e1) -> free_variables (substitution e0 var e1) 
+| Plus (e0, e1) -> (free_variables e0) @ (free_variables e1) 
+| Mult (e0, e1) -> (free_variables e0) @ (free_variables e1) 
+| Lambda (var, t, e0) -> free_variables (substitution e0 var (dummy_value t)) 
+| Apply (e0, e1) -> 
+  (match e0 with
+  | Lambda (var, t, expr) -> free_variables (substitution e0 var e1)
+  | _ -> free_variables e0)
 | _ -> []  
 
 and substitution (e1: exp) (x: string) (e2: exp) = 
