@@ -55,7 +55,8 @@ match e with
 | Apply (e0, e1) ->  
   (match e0 with 
   | Lambda (var, typ, def) -> multi_step (substitution def var e1) 
-  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step [(label, def)] (substitution def var e1)
+  | LambdaRec (label, t_left, t_right, var, def) -> 
+    recursive_step [(label, Lambda(var, t_left, def))] (substitution def var (multi_step e1))
   | _ -> multi_step e0) 
 | _ -> raise Eval_error  
 
@@ -95,11 +96,25 @@ match e with
     | Num (right_value) -> Num(left_value * right_value)
     | _ -> raise Eval_error)
   | _ -> raise Eval_error)
-| Var (label) -> search_recursive_functions labels label
 | Apply (funct, param) -> 
   (match funct with
-  | Lambda (var, left_type, def) -> recursive_step labels (substitution def var param)
-  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step (push_recursive_function labels label def) (substitution def var param)
+  | Lambda (var, left_type, def) ->
+    (match substitution def var (recursive_step labels param) with
+    | evaluated_funct -> recursive_step labels evaluated_funct)
+  | LambdaRec (label, t_left, t_right, var, def) -> 
+    (match push_recursive_function labels label (Lambda(var, t_left, def)) with
+    | labels_processed ->
+      (match substitution def var (recursive_step labels_processed param) with
+      | evaluated_funct -> recursive_step labels_processed evaluated_funct
+      )
+    )
+  | Var (label) -> 
+    (match search_recursive_functions labels label with
+    | replaced_funct -> 
+      if replaced_funct=funct 
+      then multi_step funct
+      else recursive_step labels (Apply(replaced_funct, recursive_step labels param))
+    )
   | _ -> recursive_step labels funct)
 | _ -> multi_step e
 
@@ -114,7 +129,7 @@ match current_list with
 | (current_name, current_definition)::t ->
   if current_name=label
   then (label, def)::t
-  else (current_name, current_definition)::(push_recursive_function t label def)
+  else (label, def)::(push_recursive_function t label def)
 
 and type_check (te: type_environment) (e: exp) = 
 match e with
