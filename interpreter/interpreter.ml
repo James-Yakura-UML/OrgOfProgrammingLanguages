@@ -54,9 +54,9 @@ match e with
   | _ -> raise Eval_error) 
 | Apply (e0, e1) ->  
   (match e0 with 
-  | Lambda (var, typ, e0) -> multi_step (substitution e0 var e1) 
-  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step (push_recursive_function [] label def) (substitution def var e1)
-  | _ -> raise Eval_error) 
+  | Lambda (var, typ, def) -> multi_step (substitution def var e1) 
+  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step [(label, def)] (substitution def var e1)
+  | _ -> multi_step e0) 
 | _ -> raise Eval_error  
 
 and multi_step (e: exp) = 
@@ -99,7 +99,7 @@ match e with
 | Apply (funct, param) -> 
   (match funct with
   | Lambda (var, left_type, def) -> recursive_step labels (substitution def var param)
-  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step [(label, def)] (substitution def var param)
+  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step (push_recursive_function labels label def) (substitution def var param)
   | _ -> recursive_step labels funct)
 | _ -> multi_step e
 
