@@ -3,17 +3,18 @@ type typ =
 | TInt  
 | TArrow of typ * typ  
 
-type exp = 
-| True 
-| False 
-| If of exp * exp * exp 
-| Num of int 
-| IsZero of exp 
-| Plus of exp * exp 
-| Mult of exp * exp 
-| Var of string 
-| Lambda of string * typ * exp 
-| Apply of exp * exp   
+type exp =
+  | True
+  | False
+  | If of exp * exp * exp
+  | Num of int
+  | IsZero of exp
+  | Plus of exp * exp
+  | Mult of exp * exp
+  | Var of string
+  | Lambda of string * typ * exp
+  | Apply of exp * exp
+  | LambdaRec of string * typ * typ * string * exp
 
 type type_environment = (string * typ) list
 
@@ -54,6 +55,7 @@ match e with
 | Apply (e0, e1) ->  
   (match e0 with 
   | Lambda (var, typ, e0) -> multi_step (substitution e0 var e1) 
+  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step (push_recursive_function [] label def) (substitution def var e1)
   | _ -> raise Eval_error) 
 | _ -> raise Eval_error  
 
@@ -64,7 +66,55 @@ match e with
 | Num (n) -> Num (n) 
 | Var (name) -> Var (name) 
 | Lambda (var, typ, e0) -> Lambda (var, typ, e0) 
+| LambdaRec (label, left_type, right_type, var, def) -> LambdaRec (label, left_type, right_type, var, def)
 | _ -> step e  
+
+and recursive_step (labels: (string * exp) list) (e:exp) =
+match e with
+| If (cond, then_val, else_val) ->
+  (match recursive_step labels cond with
+  | True -> recursive_step labels then_val
+  | False -> recursive_step labels else_val
+  | _ -> raise Eval_error)
+| IsZero (number) ->
+  (match recursive_step labels number with
+  | Num (0) -> True
+  | Num (n) -> False
+  | _ -> raise Eval_error)
+| Plus (left, right) ->
+  (match recursive_step labels left with
+  | Num (left_value) ->
+    (match recursive_step labels right with
+    | Num (right_value) -> Num(left_value + right_value)
+    | _ -> raise Eval_error)
+  | _ -> raise Eval_error)
+| Mult (left, right) ->
+  (match recursive_step labels left with
+  | Num (left_value) ->
+    (match recursive_step labels right with
+    | Num (right_value) -> Num(left_value * right_value)
+    | _ -> raise Eval_error)
+  | _ -> raise Eval_error)
+| Var (label) -> search_recursive_functions labels label
+| Apply (funct, param) -> 
+  (match funct with
+  | Lambda (var, left_type, def) -> recursive_step labels (substitution def var param)
+  | LambdaRec (label, t_left, t_right, var, def) -> recursive_step [(label, def)] (substitution def var param)
+  | _ -> recursive_step labels funct)
+| _ -> multi_step e
+
+and search_recursive_functions (labels: (string * exp) list) (target: string) =
+match labels with
+| [] -> Var(target)
+| (current_name,current_definition)::t -> if current_name=target then current_definition else search_recursive_functions t target
+
+and push_recursive_function (current_list: (string * exp) list) (label: string) (def: exp) =
+match current_list with 
+| [] -> [(label, def)]
+| (current_name, current_definition)::t ->
+  if current_name=label
+  then (label, def)::t
+  else (current_name, current_definition)::(push_recursive_function t label def)
 
 and type_check (te: type_environment) (e: exp) = 
 match e with
@@ -107,6 +157,8 @@ match e with
     | lambda_left_type -> lambda_right_type
     | _ -> raise Type_error)
   | t -> t)
+| LambdaRec (label, left_type, right_type, var, expr) -> 
+  TArrow (left_type, right_type)
 | _ -> raise Type_error
 
 and dummy_value (t: typ)=(*This is a separate method in order to handle functions that output functions. Dummy values are purely for type checking and should never be evaluated.*) 
@@ -126,20 +178,20 @@ match e with
 | Lambda (var, t, e0) -> free_variables (substitution e0 var (dummy_value t)) 
 | Apply (e0, e1) -> 
   (match e0 with
-  | Lambda (var, t, expr) -> free_variables (substitution e0 var e1)
+  | Lambda (var, t, expr) -> free_variables (substitution expr var e1)
+  | LambdaRec (label, t_left, t_right, var, expr) -> free_variables (substitution expr var e1)
   | _ -> free_variables e0)
+| LambdaRec (label, t_left, t_right, var, expr) -> free_variables (substitution expr var (dummy_value t_left))
 | _ -> []  
 
 and substitution (e1: exp) (x: string) (e2: exp) = 
 match e1 with 
-| Var (name) ->  
-  (match name with 
-  | x -> e2 
-  | _ -> e1) 
+| Var (name) -> if name=x then e2 else e1
 | If (condition, ifTrue, ifFalse) -> (If (substitution condition x e2, substitution ifTrue x e2, substitution ifFalse x e2)) 
 | IsZero (arg) -> IsZero (substitution arg x e2) 
 | Plus (left, right) -> Plus (substitution left x e2, substitution right x e2) 
 | Mult (left, right) -> Mult (substitution left x e2, substitution right x e2) 
 | Lambda (var, typ, sube) -> Lambda (var, typ, substitution sube x e2) 
 | Apply (left, right) -> Apply (substitution left x e2, substitution right x e2) 
+| LambdaRec (label, t_left, t_right, var, expr) -> LambdaRec (label, t_left, t_right, var, substitution expr x e2)
 | _ -> e1
